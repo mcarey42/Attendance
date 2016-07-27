@@ -1,0 +1,57 @@
+﻿<Page
+    x:Class="Attendant.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Attendant"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Height="1024"
+    Width="1280">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Pivot x:Name="pivMainPivot" Title="Attendance" Width="1280" Height="1024">
+            <PivotItem Header="Student ID Number" Margin="12,0,12,12">
+                <Grid HorizontalAlignment="Left" Height="910" Margin="10,10,0,0" VerticalAlignment="Top" Width="1237">
+                    <TextBlock x:Name="textBlockMessage" HorizontalAlignment="Left" Margin="110,800,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Height="100" Width="965" FontSize="24" CompositeMode="SourceOver"/>
+                    <Button x:Name="btnRestart" Content="Restart" Visibility="Collapsed" Background="Red" Foreground="White" HorizontalAlignment="Left" Margin="850,725,0,0" VerticalAlignment="Top" Height="51" Width="178" FontSize="32" Click="btnRestart_Click"/>
+                    <Image x:Name="image" HorizontalAlignment="Left" Height="307" Margin="110,21,0,0" VerticalAlignment="Top" Width="965" Source="Assets/linworthglass.jpg"/>
+                    <TextBlock x:Name="textBlock" HorizontalAlignment="Left" Margin="110,345,0,0" TextWrapping="Wrap" Text="Please enter your Student ID Number and press Enter." VerticalAlignment="Top" Height="175" Width="965" SelectionChanged="textBlock_SelectionChanged" FontSize="64" CompositeMode="SourceOver"/>
+                    <TextBox x:Name="tbStudentID" HorizontalAlignment="Left" Margin="125,525,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Height="145" Width="950" FontSize="72" TextChanged="tbStudentID_TextChanged" KeyDown="tbStudentID_KeyDown" KeyUp="tbStudentID_KeyUp" />
+                    <Button x:Name="btnGo" Content="Go!" HorizontalAlignment="Left" Margin="495,690,0,0" VerticalAlignment="Top" Height="111" Width="278" FontSize="64" Click="btnGo_Click"/>
+                </Grid>
+            </PivotItem>
+            <PivotItem Header="Check In/Out" IsEnabled="False" IsHitTestVisible="False">
+                <Grid HorizontalAlignment="Left" Height="910" Margin="10,10,0,0" VerticalAlignment="Top" Width="1237">
+                    <Button x:Name="btnCheckIn" Content="Check In" HorizontalAlignment="Left" Margin="257,124,0,0" VerticalAlignment="Top" Height="138" Width="291" FontSize="24" Click="btnCheckIn_Click"/>
+                    <Button x:Name="btnCheckOut" Content="Check Out" HorizontalAlignment="Left" Margin="808,124,0,0" VerticalAlignment="Top" Height="138" Width="325" FontSize="24" Click="btnCheckOut_Click" />
+                    <Button x:Name="btnCheckOut_Dest1" Content="Check Out Dest 1" HorizontalAlignment="Left" Margin="723,300,0,0" VerticalAlignment="Top" Height="100" Width="230" FontSize="24" Click="btnCheckOut_Dest1_Click" />
+                    <Button x:Name="btnCheckOut_Dest2" Content="Check Out Dest 2" HorizontalAlignment="Left" Margin="990,300,0,0" VerticalAlignment="Top" Height="100" Width="230" FontSize="24" Click="btnCheckOut_Dest2_Click" />
+                    <Button x:Name="btnCheckOut_Dest3" Content="Check Out Dest 3" HorizontalAlignment="Left" Margin="723,467,0,0" VerticalAlignment="Top" Height="100" Width="230" FontSize="24" Click="btnCheckOut_Dest3_Click" />
+                    <Button x:Name="btnCheckOut_Dest4" Content="Check Out Dest 4" HorizontalAlignment="Left" Margin="990,467,0,0" VerticalAlignment="Top" Height="100" Width="230" FontSize="24" Click="btnCheckOut_Dest4_Click" />
+                    <Button x:Name="btnCheckOut_Dest5" Content="Check Out Dest 5" HorizontalAlignment="Left" Margin="723,634,0,0" VerticalAlignment="Top" Height="100" Width="230" FontSize="24" Click="btnCheckOut_Dest5_Click" />
+                    <Button x:Name="btnCheckOut_Dest6" Content="Check Out Dest 6" HorizontalAlignment="Left" Margin="990,634,0,0" VerticalAlignment="Top" Height="100" Width="230" FontSize="24" Click="btnCheckOut_Dest6_Click" />
+                    <Button x:Name="btnCheckOut_Dest7" Content="Check Out Dest 7" HorizontalAlignment="Left" Margin="723,801,0,0" VerticalAlignment="Top" Height="100" Width="230" FontSize="24" Click="btnCheckOut_Dest7_Click" />
+                    <Button x:Name="btnCheckOut_Dest8" Content="Check Out Dest 8" HorizontalAlignment="Left" Margin="990,801,0,0" VerticalAlignment="Top" Height="100" Width="230" FontSize="24" Click="btnCheckOut_Dest8_Click" />
+                    <WebView x:Name="webviewDailyNews" HorizontalAlignment="Left" Height="400" Margin="58,375,0,0" VerticalAlignment="Top" Width="640"/>
+                    <TextBlock x:Name="textBlockCheckInOut" HorizontalAlignment="Left" Margin="58,800,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Height="100" Width="640" FontSize="24" CompositeMode="SourceOver"/>
+                </Grid>
+            </PivotItem>
+            <PivotItem Header="" IsEnabled="False" IsHitTestVisible="False">
+                <Grid HorizontalAlignment="Left" Height="910" Margin="10,10,0,0" VerticalAlignment="Top" Width="1237">
+                    <Button x:Name="btnReturnFromConfig" Content="Abort Configuration Changes" HorizontalAlignment="Left" Margin="214,774,0,0" VerticalAlignment="Top" Height="80" Width="435" FontSize="24" Click="btnAbortChanges_Click"/>
+                    <Button x:Name="btnSaveConfigChanges" Content="Save Configuration Changes" HorizontalAlignment="Left" Margin="761,774,0,0" VerticalAlignment="Top" Height="80" Width="405" FontSize="24" Click="btnSaveConfigChanges_Click"/>
+                    <TextBlock x:Name="lDBHostIP" HorizontalAlignment="Left" Margin="214,284,0,0" TextWrapping="Wrap" Text="DB Host IP Address:" VerticalAlignment="Top" Width="292" Height="44" FontSize="26.667"/>
+                    <TextBlock x:Name="lDBUserName" HorizontalAlignment="Left" Margin="214,354,0,0" TextWrapping="Wrap" Text="DB Username:" VerticalAlignment="Top" Width="292" Height="44" FontSize="26.667"/>
+                    <TextBlock x:Name="lDBInstance" HorizontalAlignment="Left" Margin="214,428,0,0" TextWrapping="Wrap" Text="DB Instance:" VerticalAlignment="Top" Width="292" Height="44" FontSize="26.667"/>
+                    <TextBlock x:Name="lDBPassword" HorizontalAlignment="Left" Margin="214,505,0,0" TextWrapping="Wrap" Text="DB Password:" VerticalAlignment="Top" Width="292" Height="44" FontSize="26.667"/>
+                    <TextBox x:Name="tbDatabaseIP" HorizontalAlignment="Left" Margin="511,284,0,0" TextWrapping="Wrap" Text="Database Host IP" VerticalAlignment="Top" Width="519" Height="44" FontSize="26.667"/>
+                    <TextBox x:Name="tbDatabaseUserName" HorizontalAlignment="Left" Margin="511,354,0,0" TextWrapping="Wrap" Text="Database Username" VerticalAlignment="Top" Width="519" Height="44" FontSize="26.667"/>
+                    <TextBox x:Name="tbDatabaseInstance" HorizontalAlignment="Left" Margin="511,428,0,0" TextWrapping="Wrap" Text="Database Instance Name" VerticalAlignment="Top" Width="519" Height="44" FontSize="26.667"/>
+                    <PasswordBox x:Name="pbPassword" HorizontalAlignment="Left" Margin="511,505,0,0" VerticalAlignment="Top" Width="519" Height="44" FontSize="26.667"/>
+
+                </Grid>
+            </PivotItem>
+        </Pivot>
+    </Grid>
+</Page>
