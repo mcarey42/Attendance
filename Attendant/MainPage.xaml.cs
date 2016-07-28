@@ -16,6 +16,7 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using MySql.Data.MySqlClient;
+using System.Text.RegularExpressions;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -34,22 +35,38 @@ namespace Attendant
     /// </summary>
     public sealed partial class MainPage : Page
     {
-        private bool bFlipedPage = false;
+        // Define the pivot pages.  Add one here if you need to create a new one.
+        private const int MainSignInOutPivot = 0;
+        private const int SignOutPivot = 1;
+        private const int ConfigurationPivot = 2;
+        private const int SignOutCustomPivot = 3;
+        private const int SignOutCustomWithInitialsPivot = 4;
+
         // The Windows RT mysql release does not support SSL.  This needs fixed...
         // TODO: Convert to use app-settings, add hidden configuration screen.
         Windows.Storage.ApplicationDataContainer localSettings = Windows.Storage.ApplicationData.Current.LocalSettings;
 
+        // Database connection
         private MySqlConnection dbConn;
 
-        // This is the main student ID variable we deal with.
+        // Common destinations.
+        private CommonDestination[] CommonDestinations = new CommonDestination[8];
+
+        // Global application state variables including student information, tab state information, etc.
         private Int32 iStudentNumber = 0;
         private Int32 iStudentID = 0;
         private bool bStudentCheckedIn = false;
-        private CommonDestination[] CommonDestinations = new CommonDestination[8];
+        private Int32 iStudentTimeRemaining = 0;
+        private TextBlock currentTextBlockMessage;
+        private int KeyModeCounter = 0;
+        private int ConfigKeyCounter = 0;
 
         public MainPage()
         {
             this.InitializeComponent();
+
+            // Initalize the application and it's state variables.
+            SelectUIPage(0);
 
             // Initalize the Application Data if it's not already present.
             if ((string)localSettings.Values["DBServer"] == null ) localSettings.Values["DBServer"] = "Server IP";
@@ -63,26 +80,25 @@ namespace Attendant
             ppp = System.Text.CodePagesEncodingProvider.Instance;
             System.Text.Encoding.RegisterProvider(ppp);
 
+            // Attempt to open the long term connection.
             try
             {
                 string csMySQL = "Server=" + localSettings.Values["DBServer"] +
                     ";Database=" + localSettings.Values["DBDatabase"] + 
                     ";Uid=" + localSettings.Values["DBUser"] +
                     ";Pwd=" + localSettings.Values["DBPassword"] + ";SslMode=None;";
-                
-                
+                                
                 dbConn = new MySqlConnection(csMySQL);
                 dbConn.Open();
-                string debugOutput = String.Format("MySQL version : {0}", dbConn.ServerVersion);
+                string debugOutput = String.Format("MySQL datbase connection open.  Mysql version : {0}", dbConn.ServerVersion);
                 Debug.WriteLine(debugOutput);
-
             }
             catch (Exception ex)
             {
                 // Show the error message, and the restart button.
                 textBlockMessage.Visibility = Visibility.Visible;
                 btnRestart.Visibility = Visibility.Visible;
-                textBlockMessage.Text = "An error occured when connecting to the MySQL Database server.  Please validate the hostname, database name, username and password, then restart the system." + "\nException: " + ex.Message + "\n";
+                currentTextBlockMessage.Text = "An error occured when connecting to the MySQL Database server.  Please validate the hostname, database name, username and password, then restart the system." + "\nException: " + ex.Message + "\n";
             }
 
             // Attempt to fill in the common destinations array.
@@ -92,7 +108,7 @@ namespace Attendant
             string url = "http://" + localSettings.Values["DBServer"] + "/motd.php";
             Uri navUri = new Uri(url);
             //webviewDailyNews.NavigateToString(url);
-            webviewDailyNews.Navigate(navUri);
+            webviewDailyNews.Navigate(navUri);            
         }
 
         void PopulateCommonDestinations()
@@ -155,94 +171,86 @@ namespace Attendant
                 {
                     case 0:
                         if (CommonDestinations[i].Active)
-                            btnCheckOut_Dest1.Visibility = Visibility.Visible;
+                            btnSignOut_Dest1.Visibility = Visibility.Visible;
                         else
-                            btnCheckOut_Dest1.Visibility = Visibility.Collapsed;
-                        btnCheckOut_Dest1.Content = CommonDestinations[i].LocationName;
+                            btnSignOut_Dest1.Visibility = Visibility.Collapsed;
+                        btnSignOut_Dest1.Content = CommonDestinations[i].LocationName;
                         break;
                     case 1:
                         if (CommonDestinations[i].Active)
-                            btnCheckOut_Dest2.Visibility = Visibility.Visible;
+                            btnSignOut_Dest2.Visibility = Visibility.Visible;
                         else
-                            btnCheckOut_Dest2.Visibility = Visibility.Collapsed;
-                        btnCheckOut_Dest2.Content = CommonDestinations[i].LocationName;
+                            btnSignOut_Dest2.Visibility = Visibility.Collapsed;
+                        btnSignOut_Dest2.Content = CommonDestinations[i].LocationName;
                         break;
                     case 2:
                         if (CommonDestinations[i].Active)
-                            btnCheckOut_Dest3.Visibility = Visibility.Visible;
+                            btnSignOut_Dest3.Visibility = Visibility.Visible;
                         else
-                            btnCheckOut_Dest3.Visibility = Visibility.Collapsed;
-                        btnCheckOut_Dest3.Content = CommonDestinations[i].LocationName;
+                            btnSignOut_Dest3.Visibility = Visibility.Collapsed;
+                        btnSignOut_Dest3.Content = CommonDestinations[i].LocationName;
                         break;
                     case 3:
                         if (CommonDestinations[i].Active)
-                            btnCheckOut_Dest4.Visibility = Visibility.Visible;
+                            btnSignOut_Dest4.Visibility = Visibility.Visible;
                         else
-                            btnCheckOut_Dest4.Visibility = Visibility.Collapsed;
-                        btnCheckOut_Dest4.Content = CommonDestinations[i].LocationName;
+                            btnSignOut_Dest4.Visibility = Visibility.Collapsed;
+                        btnSignOut_Dest4.Content = CommonDestinations[i].LocationName;
                         break;
                     case 4:
                         if (CommonDestinations[i].Active)
-                            btnCheckOut_Dest5.Visibility = Visibility.Visible;
+                            btnSignOut_Dest5.Visibility = Visibility.Visible;
                         else
-                            btnCheckOut_Dest5.Visibility = Visibility.Collapsed;
-                        btnCheckOut_Dest5.Content = CommonDestinations[i].LocationName;
+                            btnSignOut_Dest5.Visibility = Visibility.Collapsed;
+                        btnSignOut_Dest5.Content = CommonDestinations[i].LocationName;
                         break;
                     case 5:
                         if (CommonDestinations[i].Active)
-                            btnCheckOut_Dest6.Visibility = Visibility.Visible;
+                            btnSignOut_Dest6.Visibility = Visibility.Visible;
                         else
-                            btnCheckOut_Dest6.Visibility = Visibility.Collapsed;
-                        btnCheckOut_Dest6.Content = CommonDestinations[i].LocationName;
+                            btnSignOut_Dest6.Visibility = Visibility.Collapsed;
+                        btnSignOut_Dest6.Content = CommonDestinations[i].LocationName;
                         break;
                     case 6:
                         if (CommonDestinations[i].Active)
-                            btnCheckOut_Dest7.Visibility = Visibility.Visible;
+                            btnSignOut_Dest7.Visibility = Visibility.Visible;
                         else
-                            btnCheckOut_Dest7.Visibility = Visibility.Collapsed;
-                        btnCheckOut_Dest7.Content = CommonDestinations[i].LocationName;
+                            btnSignOut_Dest7.Visibility = Visibility.Collapsed;
+                        btnSignOut_Dest7.Content = CommonDestinations[i].LocationName;
                         break;
                     case 7:
                         if (CommonDestinations[i].Active)
-                            btnCheckOut_Dest8.Visibility = Visibility.Visible;
+                            btnSignOut_Dest8.Visibility = Visibility.Visible;
                         else
-                            btnCheckOut_Dest8.Visibility = Visibility.Collapsed;
-                        btnCheckOut_Dest8.Content = CommonDestinations[i].LocationName;
+                            btnSignOut_Dest8.Visibility = Visibility.Collapsed;
+                        btnSignOut_Dest8.Content = CommonDestinations[i].LocationName;
                         break;
                 }
             }
 
         }
 
-        private void textBlock_SelectionChanged(object sender, RoutedEventArgs e)
-        {
-
-        }
-
-        private void tbStudentID_TextChanged(object sender, TextChangedEventArgs e)
-        {
-
-        }
-
+        /// <summary>
+        /// Restart button handler.  Click me to Exit() the CoreApplication and reload it.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void btnRestart_Click(object sender, RoutedEventArgs e)
         {
             Windows.ApplicationModel.Core.CoreApplication.Exit();
         }
 
-        private void btnGo_Click(object sender, RoutedEventArgs e)
-        {
-            ProcessStudentID();
-        }
 
-        private void ProcessStudentID()
+        private bool ProcessStudentNumber()
         {
             // Clear any old messages.
             textBlockMessage.Text = "";
 
             if (tbStudentID.Text == "")
             {
-                textBlockMessage.Text = "An empty student ID is like an empty imagination...  Please enter your student ID and try again.";
-                return;
+                String text = String.Format("An empty student ID is like an empty imagination...  Please enter your student ID and try again.");
+                currentTextBlockMessage.Text = text;
+                return false;
             }
 
             // Check for a valid Student ID number, and if found, go to check in / out screen.
@@ -253,106 +261,147 @@ namespace Attendant
                 // Parse the student number.
                 iStudentNumber = Int32.Parse(tbStudentID.Text);
 
-                string sqlStatement = "SELECT * FROM Students WHERE StudentNumber = " + iStudentNumber;
+                string sqlStatement = "SELECT * FROM Students WHERE StudentNumber = " + iStudentNumber + " AND CurrentStudent = TRUE";
                 MySqlDataReader studentReader = null;
                 MySqlCommand sqlCmd = new MySqlCommand(sqlStatement, dbConn);
                 studentReader = sqlCmd.ExecuteReader();
 
+                // Ensure there are rows, and pull the data.
                 if (studentReader.HasRows)
                 {
                     bStudentFound = true;
                     studentReader.Read();
                     iStudentID = studentReader.GetInt32("ID");
                     bStudentCheckedIn = studentReader.GetBoolean("CurrentlyCheckedIn");
+                    iStudentTimeRemaining = studentReader.GetInt32("DailyTimeRemaining");
                 }
 
+                // Close the reader.  We have what we need.
                 studentReader.Close();
 
                 if (!bStudentFound)
                 {
-                    textBlockMessage.Text = "Your student number was not found!  Please verify that you exist.";
+                    String text = String.Format("Your student number was not found!  Please verify that you exist.");
+                    currentTextBlockMessage.Text = text;
                     tbStudentID.Text = "";
-                    return;
+                    return false;
                 }
-                else
-                {
-                    ToggleSelectUIPage();
-                }
+                // Fall through to success.
             }
             catch (FormatException)
             {
-                textBlockMessage.Text = "Please stop trying to create a SQL injection and play nice.";
+                String text = String.Format("Please stop trying to create a SQL injection and play nice.");
+                currentTextBlockMessage.Text = text;
                 tbStudentID.Text = "";
+                return false;
             }
             catch (Exception ex)
             {
-                textBlockMessage.Text = "An unusual error occured while attempting to execute a database operation." + "\nException: " + ex.Message + "\n";
+                String text = String.Format("An unusual error occured while attempting to execute a database operation." + "\nException: " + ex.Message + "\n");
+                currentTextBlockMessage.Text = text;
                 tbStudentID.Text = "";
+                return false;
             }
+
+            return true;
         }
 
-        private void ToggleSelectUIPage()
+
+        private void SelectUIPage(int destinationTab)
         {
-            if (bFlipedPage)
-            {
-                // Flip the UI back to the main page.
-                this.pivMainPivot.SelectedIndex = 0;
-                PivotItem piStudentIDPivot = (PivotItem)this.pivMainPivot.Items[0];
-                PivotItem piCheckInOutPivot = (PivotItem)this.pivMainPivot.Items[1];
-                piCheckInOutPivot.IsEnabled = false;
-                piStudentIDPivot.IsEnabled = true;
-                piStudentIDPivot.Focus(FocusState.Programmatic);
-                tbStudentID.Focus(FocusState.Programmatic);
-                bFlipedPage = !bFlipedPage;
-                tbStudentID.Text = "";
-                iStudentNumber = 0;
-                iStudentID = 0;
-                bStudentCheckedIn = false;
-            }
-            else
-            {
-                // Flip the UI back to the check in/out.
-                this.pivMainPivot.SelectedIndex = 1;
-                PivotItem piStudentIDPivot = (PivotItem)this.pivMainPivot.Items[0];
-                PivotItem piCheckInOutPivot = (PivotItem)this.pivMainPivot.Items[1];
-                piCheckInOutPivot.IsEnabled = true;
-                piStudentIDPivot.IsEnabled = false;
-                piCheckInOutPivot.Focus(FocusState.Programmatic);
-                bFlipedPage = !bFlipedPage;
-                textBlockCheckInOut.Text = "";
+            PivotItem piMainSignInOutPivot = (PivotItem)this.pivMainPivot.Items[MainSignInOutPivot];
+            PivotItem piSignOutPivot = (PivotItem)this.pivMainPivot.Items[SignOutPivot];
+            PivotItem piConfiguration = (PivotItem)this.pivMainPivot.Items[ConfigurationPivot];
+            PivotItem piSignOutCustom = (PivotItem)this.pivMainPivot.Items[SignOutCustomPivot];
+            PivotItem piSignOutCustomWithInitials = (PivotItem)this.pivMainPivot.Items[SignOutCustomWithInitialsPivot];
 
-                if (bStudentCheckedIn)
-                {
-                    // Set the Check in options as invalid.
-                    btnCheckIn.IsEnabled = false;
-                    btnCheckOut.IsEnabled = true;
-                    btnCheckOut_Dest1.IsEnabled = true;
-                    btnCheckOut_Dest2.IsEnabled = true;
-                    btnCheckOut_Dest3.IsEnabled = true;
-                    btnCheckOut_Dest4.IsEnabled = true;
-                    btnCheckOut_Dest5.IsEnabled = true;
-                    btnCheckOut_Dest6.IsEnabled = true;
-                    btnCheckOut_Dest7.IsEnabled = true;
-                    btnCheckOut_Dest8.IsEnabled = true;
-                }
-                else
-                {
-                    // Set the check out options as invalid.  
-                    btnCheckOut.IsEnabled = false;
-                    btnCheckOut_Dest1.IsEnabled = false;
-                    btnCheckOut_Dest2.IsEnabled = false;
-                    btnCheckOut_Dest3.IsEnabled = false;
-                    btnCheckOut_Dest4.IsEnabled = false;
-                    btnCheckOut_Dest5.IsEnabled = false;
-                    btnCheckOut_Dest6.IsEnabled = false;
-                    btnCheckOut_Dest7.IsEnabled = false;
-                    btnCheckOut_Dest8.IsEnabled = false;
-                    btnCheckIn.IsEnabled = true;
-                }
+            switch (destinationTab)
+            {
+                case MainSignInOutPivot: // Main tab.
+                    
+                    this.pivMainPivot.SelectedIndex = 0;
+                    piMainSignInOutPivot.IsEnabled = true;
+                    piSignOutPivot.IsEnabled = false;
+                    piConfiguration.IsEnabled = false;
+                    piSignOutCustom.IsEnabled = false;
+                    piSignOutCustomWithInitials.IsEnabled = false;
+
+                    // Set focus.
+                    piMainSignInOutPivot.Focus(FocusState.Programmatic);
+                    tbStudentID.Focus(FocusState.Programmatic);
+
+                    // Clear state.
+                    tbStudentID.Text = "";
+                    iStudentNumber = 0;
+                    iStudentID = 0;
+                    iStudentTimeRemaining = 0;
+                    bStudentCheckedIn = false;
+                    textBlockSignInMessage.Text = "";
+
+                    currentTextBlockMessage = textBlockSignInMessage;
+                    break;
+                case SignOutPivot: // Main Sign Out Pivot.
+                    this.pivMainPivot.SelectedIndex = 1;
+                    piMainSignInOutPivot.IsEnabled = false;
+                    piSignOutPivot.IsEnabled = true;
+                    piConfiguration.IsEnabled = false;
+                    piSignOutCustom.IsEnabled = false;
+                    piSignOutCustomWithInitials.IsEnabled = false;
+
+                    piSignOutPivot.Focus(FocusState.Programmatic);
+                    currentTextBlockMessage = textBlockSignOut;
+                    break;
+                case ConfigurationPivot: // Configuration Pivot
+                    this.pivMainPivot.SelectedIndex = 2;
+                    piMainSignInOutPivot.IsEnabled = false;
+                    piSignOutPivot.IsEnabled = false;
+                    piConfiguration.IsEnabled = true;
+                    piSignOutCustom.IsEnabled = false;
+                    piSignOutCustomWithInitials.IsEnabled = false;
+
+                    piConfiguration.Focus(FocusState.Programmatic);
+                    currentTextBlockMessage = textBlockConfigurationMessage;
+
+                    // Set the values from the application local settings data.
+                    tbDatabaseIP.Text = (string)localSettings.Values["DBServer"];
+                    tbDatabaseInstance.Text = (string)localSettings.Values["DBDatabase"];
+                    tbDatabaseUserName.Text = (string)localSettings.Values["DBUser"];
+                    pbPassword.Password = (string)localSettings.Values["DBPassword"];
+
+                    break;
+                case SignOutCustomPivot: // Sign out with custom destination.
+                    this.pivMainPivot.SelectedIndex = 3;
+                    piMainSignInOutPivot.IsEnabled = false;
+                    piSignOutPivot.IsEnabled = false;
+                    piConfiguration.IsEnabled = false;
+                    piSignOutCustom.IsEnabled = true;
+                    piSignOutCustomWithInitials.IsEnabled = false;
+
+                    piSignOutCustom.Focus(FocusState.Programmatic);
+                    currentTextBlockMessage = textBlockCheckOutCustomMessage;
+                    break;
+                case SignOutCustomWithInitialsPivot: // Sign out with custom destination and initials.
+                    this.pivMainPivot.SelectedIndex = 4;
+                    piMainSignInOutPivot.IsEnabled = false;
+                    piSignOutPivot.IsEnabled = false;
+                    piConfiguration.IsEnabled = false;
+                    piSignOutCustom.IsEnabled = false;
+                    piSignOutCustomWithInitials.IsEnabled = true;
+
+                    piSignOutCustomWithInitials.Focus(FocusState.Programmatic);
+                    currentTextBlockMessage = textBlockCheckOutCustomWithInitialsMessage;
+                    break;
             }
+
+            // Clear any existing message when we change state.
+            currentTextBlockMessage.Text = "";
         }
 
-        private async void ProcessCheckIn()
+        //
+        // Primary database manipulation methods.
+        //
+
+        private async void ProcessSignIn()
         {
             // Execute the checkin event.
             MySqlTransaction trans = null;
@@ -380,23 +429,24 @@ namespace Attendant
                 catch (MySqlException ex2)
                 {
                     String text2 = String.Format("Checkin Processing Rollback Error!  Please inform your administrator: \nException: " + ex2.Message);
-                    textBlockCheckInOut.Text = text2;
+                    await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => { currentTextBlockMessage.Text = text2; });
+                    await System.Threading.Tasks.Task.Delay(5000);
                 }
 
                 String text1 = String.Format("Checkin Processing Error!  Please inform your administrator: \nException: " + ex1.Message);
-                textBlockCheckInOut.Text = text1;
+                await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => { currentTextBlockMessage.Text = text1; });
+                await System.Threading.Tasks.Task.Delay(5000);
             }
 
 
             // Show status message for 3 seconds.
-            String text = String.Format("Processing Check In...");
-            //textBlockCheckInOut.Text = text;
-            await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => { textBlockCheckInOut.Text = text; });
-            await System.Threading.Tasks.Task.Delay(3000);
-            ToggleSelectUIPage();
+            String text = String.Format("You are signed in!");
+            await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => { currentTextBlockMessage.Text = text; });
+            await System.Threading.Tasks.Task.Delay(2000);
+            SelectUIPage(0);
         }
 
-        private async void ProcessCheckOut(UInt32 destination)
+        private async void ProcessCheckOutCommonDestination(UInt32 destination)
         {
             // Execute the checkin event.
             MySqlTransaction trans = null;
@@ -410,15 +460,7 @@ namespace Attendant
 
                 cmd.CommandText = "UPDATE Students SET CurrentlyCheckedIn=FALSE WHERE ID=" + iStudentID;
                 cmd.ExecuteNonQuery();
-                if (destination == 0) // no actual destination given.
-                {
-                    cmd.CommandText = "INSERT INTO Events (EventType, InstanceDate, StudentID, Destination, CommonDestinationID) VALUES ( 2, NOW(), " + iStudentID + ", NULL, NULL)";
-                }
-                else
-                {
-                    cmd.CommandText = "INSERT INTO Events (EventType, InstanceDate, StudentID, Destination, CommonDestinationID) VALUES ( 2, NOW(), " + iStudentID + ", NULL, " + destination + " )";
-                }
-                
+                cmd.CommandText = "INSERT INTO Events (EventType, InstanceDate, StudentID, Destination, CommonDestinationID) VALUES ( 2, NOW(), " + iStudentID + ", NULL, " + destination + " )";
                 cmd.ExecuteNonQuery();
 
                 trans.Commit();
@@ -428,84 +470,190 @@ namespace Attendant
                 try
                 {
                     trans.Rollback();
-
                 }
                 catch (MySqlException ex2)
                 {
-                    String text2 = String.Format("CheckOut Processing Rollback Error!  Please inform your administrator: \nException: " + ex2.Message);
-                    textBlockCheckInOut.Text = text2;
+                    String text2 = String.Format("Sign-Out Processing Rollback Error!  Please inform your administrator: \nException: " + ex2.Message);
+                    currentTextBlockMessage.Text = text2;
                 }
 
-                String text1 = String.Format("CheckOut Processing Error!  Please inform your administrator: \nException: " + ex1.Message);
-                textBlockCheckInOut.Text = text1;
+                String text1 = String.Format("Sign-Out Processing Error!  Please inform your administrator: \nException: " + ex1.Message);
+                currentTextBlockMessage.Text = text1;
             }
 
             // Show status message for 3 seconds.
             String text;
-            if (destination > 1 && destination < 9)
-                text = String.Format("Processing Check Out to {0}", CommonDestinations[destination].LocationName);
+            if (destination > 0 && destination < 9)
+                text = String.Format("Processing Sign Out to {0}", CommonDestinations[destination-1].LocationName);
             else
                 text = String.Format("Processing Check Out...");
 
             //textBlockCheckInOut.Text = text;
-            await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => { textBlockCheckInOut.Text = text; });
+            await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => { currentTextBlockMessage.Text = text; });
             await System.Threading.Tasks.Task.Delay(3000);
 
             // Flip back to the main page.
-            ToggleSelectUIPage();
+            SelectUIPage(MainSignInOutPivot);
         }
 
-        private async void btnCheckIn_Click(object sender, RoutedEventArgs e)
+        private async void ProcessCheckOutCustomDestination(string destinationName)
         {
-            ProcessCheckIn();
+            // Execute the checkin event.
+            MySqlTransaction trans = null;
+            try
+            {
+                // Clean up the text for SQL Injection and such.
+                string cleanDestination = MySqlEscape(destinationName);
+
+
+                trans = dbConn.BeginTransaction();
+
+                MySqlCommand cmd = new MySqlCommand();
+                cmd.Connection = dbConn;
+                cmd.Transaction = trans;
+
+                cmd.CommandText = "UPDATE Students SET CurrentlyCheckedIn=FALSE WHERE ID=" + iStudentID;
+                cmd.ExecuteNonQuery();
+                cmd.CommandText = "INSERT INTO Events (EventType, InstanceDate, StudentID, Destination, CommonDestinationID) VALUES ( 2, NOW(), " + iStudentID + ", '" + cleanDestination + "', NULL)";
+                cmd.ExecuteNonQuery();
+
+                trans.Commit();
+            }
+            catch (MySqlException ex1)
+            {
+                try
+                {
+                    trans.Rollback();
+                }
+                catch (MySqlException ex2)
+                {
+                    String text2 = String.Format("Sign-Out Processing Rollback Error!  Please inform your administrator: \nException: " + ex2.Message);
+                    currentTextBlockMessage.Text = text2;
+                }
+
+                String text1 = String.Format("Sign-Out Processing Error!  Please inform your administrator: \nException: " + ex1.Message);
+                currentTextBlockMessage.Text = text1;
+            }
+
+            // Show status message for 3 seconds.
+            String text;
+            text = String.Format("Processing Check Out...");
+            await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => { currentTextBlockMessage.Text = text; });
+            await System.Threading.Tasks.Task.Delay(3000);
+
+            // Flip back to the main page.
+            SelectUIPage(MainSignInOutPivot);
         }
 
-        private async void btnCheckOut_Click(object sender, RoutedEventArgs e)
+        private async void ProcessCheckOutCustomDestinationWithInitials(string destinationName, string initials)
         {
-            ProcessCheckOut(0);
+            // Execute the checkin event.
+            MySqlTransaction trans = null;
+            try
+            {
+                // Clean up the text for SQL Injection and such.
+                string cleanDestination = MySqlEscape(destinationName);
+                string cleanInitials = MySqlEscape(initials);
+
+
+                trans = dbConn.BeginTransaction();
+
+                MySqlCommand cmd = new MySqlCommand();
+                cmd.Connection = dbConn;
+                cmd.Transaction = trans;
+
+                cmd.CommandText = "UPDATE Students SET CurrentlyCheckedIn=FALSE WHERE ID=" + iStudentID;
+                cmd.ExecuteNonQuery();
+                cmd.CommandText = "INSERT INTO Events (EventType, InstanceDate, StudentID, Destination, CommonDestinationID, Initials) VALUES ( 2, NOW(), " + iStudentID + ", '" + cleanDestination + "', NULL, '" + cleanInitials + "')";
+                cmd.ExecuteNonQuery();
+
+                trans.Commit();
+            }
+            catch (MySqlException ex1)
+            {
+                try
+                {
+                    trans.Rollback();
+                }
+                catch (MySqlException ex2)
+                {
+                    String text2 = String.Format("Sign-Out Processing Rollback Error!  Please inform your administrator: \nException: " + ex2.Message);
+                    currentTextBlockMessage.Text = text2;
+                }
+
+                String text1 = String.Format("Sign-Out Processing Error!  Please inform your administrator: \nException: " + ex1.Message);
+                currentTextBlockMessage.Text = text1;
+            }
+
+            // Show status message for 3 seconds.
+            String text;
+            text = String.Format("Processing Check Out...");
+            await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => { currentTextBlockMessage.Text = text; });
+            await System.Threading.Tasks.Task.Delay(3000);
+
+            // Flip back to the main page.
+            SelectUIPage(MainSignInOutPivot);
         }
 
-        private async void btnCheckOut_Dest1_Click(object sender, RoutedEventArgs e)
+
+        //
+        // Handlers for the Main Pivot
+        //
+
+        /// <summary>
+        /// The Main Pivot's Sign In button handler.
+        /// </summary>
+        private async void btnMainSignIn_Click(object sender, RoutedEventArgs e)
         {
-            ProcessCheckOut(1);
-        }
-        private async void btnCheckOut_Dest2_Click(object sender, RoutedEventArgs e)
-        {
-            ProcessCheckOut(2);
+            // Check the student's state and see if they're already checked in.
+            if (ProcessStudentNumber())
+            {
+                if (bStudentCheckedIn)
+                {
+                    // Show an error message letting them know they're already signed in.
+                    String text = String.Format("You are already signed in!  Have a {0} and carry on...", GetRandomFoodItem());
+                    await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => { currentTextBlockMessage.Text = text; });
+                    await System.Threading.Tasks.Task.Delay(2000);
+                    SelectUIPage(MainSignInOutPivot);
+                    return;
+                }
+
+                // We now have global state on the student.  If are already signed in, flash the you're already signed in message and return to the main screen.
+                ProcessSignIn();
+            }
+            else
+            {
+                // Wait for the error message to show.
+                await System.Threading.Tasks.Task.Delay(2000);
+            }
         }
 
-        private async void btnCheckOut_Dest3_Click(object sender, RoutedEventArgs e)
+        private async void btnMainSignOut_Click(object sender, RoutedEventArgs e)
         {
-            ProcessCheckOut(3);
-        }
+            // Check the student's state and see if they're already checked in.
+            if (ProcessStudentNumber())
+            {
 
-        private async void btnCheckOut_Dest4_Click(object sender, RoutedEventArgs e)
-        {
-            ProcessCheckOut(4);
-        }
+                if (!bStudentCheckedIn)
+                {
+                    // Show an error message letting them know they're already signed out.
+                    String text = String.Format("You are already signed out!  Have a {0} and carry on...", GetRandomFoodItem());
+                    await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => { currentTextBlockMessage.Text = text; });
+                    await System.Threading.Tasks.Task.Delay(2000);
+                    SelectUIPage(MainSignInOutPivot);
+                    return;
+                }
 
-        private async void btnCheckOut_Dest5_Click(object sender, RoutedEventArgs e)
-        {
-            ProcessCheckOut(5);
-        }
+                // We now have global state on the student.  If are already signed in, flash the you're already signed in message and return to the main screen.
+                SelectUIPage(SignOutPivot);
+            }
+            else
+            {
+                // Wait for the error message to show.
+                await System.Threading.Tasks.Task.Delay(2000);
+            }
 
-        private async void btnCheckOut_Dest6_Click(object sender, RoutedEventArgs e)
-        {
-            ProcessCheckOut(6);
         }
-
-        private async void btnCheckOut_Dest7_Click(object sender, RoutedEventArgs e)
-        {
-            ProcessCheckOut(7);
-        }
-
-        private async void btnCheckOut_Dest8_Click(object sender, RoutedEventArgs e)
-        {
-            ProcessCheckOut(8);
-        }
-
-        private int KeyModeCounter = 0;
-        private int ConfigKeyCounter = 0;
 
         private void tbStudentID_KeyDown(object sender, KeyRoutedEventArgs e)
         {
@@ -520,49 +668,16 @@ namespace Attendant
 
             if (ConfigKeyCounter == 5)
             {
-                ActivateConfigurationScreen();
+                //ActivateConfigurationScreen();
+                SelectUIPage(ConfigurationPivot);
             }
 
-        }
-
-        private void ActivateConfigurationScreen()
-        {
-            // Set the values from the application local settings data.
-            tbDatabaseIP.Text = (string)localSettings.Values["DBServer"];
-            tbDatabaseInstance.Text = (string)localSettings.Values["DBDatabase"];
-            tbDatabaseUserName.Text = (string)localSettings.Values["DBUser"];
-            pbPassword.Password = (string)localSettings.Values["DBPassword"];
-
-            // Switch to the hidden pivot.
-            this.pivMainPivot.SelectedIndex = 2;
-            PivotItem piStudentIDPivot = (PivotItem)this.pivMainPivot.Items[0];
-            PivotItem piCheckInOutPivot = (PivotItem)this.pivMainPivot.Items[1];
-            PivotItem piConfigPivot = (PivotItem)this.pivMainPivot.Items[2];
-            piCheckInOutPivot.IsEnabled = false;
-            piStudentIDPivot.IsEnabled = false;
-            piConfigPivot.IsEnabled = true;
-            piConfigPivot.Focus(FocusState.Programmatic);
-            ConfigKeyCounter = 0;
-        }
-
-        private void DeActivateConfigurationScreen()
-        {
-            this.pivMainPivot.SelectedIndex = 0;
-            PivotItem piStudentIDPivot = (PivotItem)this.pivMainPivot.Items[0];
-            PivotItem piCheckInOutPivot = (PivotItem)this.pivMainPivot.Items[1];
-            PivotItem piConfigPivot = (PivotItem)this.pivMainPivot.Items[2];
-            piStudentIDPivot.IsEnabled = true;
-            piCheckInOutPivot.IsEnabled = false;
-            piConfigPivot.IsEnabled = false;
-            piStudentIDPivot.Focus(FocusState.Programmatic);
         }
 
         private void tbStudentID_KeyUp(object sender, KeyRoutedEventArgs e)
         {
-            if (e.Key == Windows.System.VirtualKey.Enter)
-            {
-                ProcessStudentID();
-            }
+            //if (e.Key == Windows.System.VirtualKey.Enter)
+            //    ProcessStudentID();
 
             if (e.Key == Windows.System.VirtualKey.Shift)
             {
@@ -575,15 +690,90 @@ namespace Attendant
                 KeyModeCounter = 0;
                 ConfigKeyCounter = 0;
             }
-
-            
         }
 
+
+
+        //
+        // Handlers for the Primary Sign Out Pivot
+        //
+
+        private async void btnSignOutCustomDest_Click(object sender, RoutedEventArgs e)
+        {
+            SelectUIPage(SignOutCustomPivot);
+        }
+
+        private async void btnSignOutWithInitials_Click(object sender, RoutedEventArgs e)
+        {
+            // Take them to the checkout screen with the destination field.
+            SelectUIPage(SignOutCustomWithInitialsPivot);
+        }
+
+        private async void btnSignOut_Dest1_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessCheckOutCommonDestination(1);
+        }
+        private async void btnSignOut_Dest2_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessCheckOutCommonDestination(2);
+        }
+
+        private async void btnSignOut_Dest3_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessCheckOutCommonDestination(3);
+        }
+
+        private async void btnSignOut_Dest4_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessCheckOutCommonDestination(4);
+        }
+
+        private async void btnSignOut_Dest5_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessCheckOutCommonDestination(5);
+        }
+
+        private async void btnSignOut_Dest6_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessCheckOutCommonDestination(6);
+        }
+
+        private async void btnSignOut_Dest7_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessCheckOutCommonDestination(7);
+        }
+
+        private async void btnSignOut_Dest8_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessCheckOutCommonDestination(8);
+        }
+
+        //
+        // Handlers for Custom Destination Pivot.
+        //
+
+        private async void btnCheckOutCustomDest_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessCheckOutCustomDestination(tbCustomDest.Text);
+        }
+
+        //
+        // Handlers for Custom Destination with Initials Pivot.
+        //
+
+        private async void btnCheckOutCustomDestWithStaffInitisls_Click(object sender, RoutedEventArgs e)
+        {
+            ProcessCheckOutCustomDestinationWithInitials(tbCustomDestWithStaffInitials.Text, tbStaffInitials.Text);
+        }
+
+        //
+        // Handlers for the Configuration pivot.
+        //
 
         private void btnAbortChanges_Click(object sender, RoutedEventArgs e)
         {
             // Switch to the main input page
-            DeActivateConfigurationScreen();
+            SelectUIPage(MainSignInOutPivot);
         }
 
         private void btnSaveConfigChanges_Click(object sender, RoutedEventArgs e)
@@ -595,7 +785,51 @@ namespace Attendant
             localSettings.Values["DBPassword"] = pbPassword.Password;
 
             // Switch to the main input page
-            DeActivateConfigurationScreen();
+            SelectUIPage(MainSignInOutPivot);
         }
+
+        //
+        // Utility Methods
+        //
+
+        private string MySqlEscape(string usString)
+        {
+            if (usString == null)
+            {
+                return null;
+            }
+            // SQL Encoding for MySQL Recommended here:
+            // http://au.php.net/manual/en/function.mysql-real-escape-string.php
+            // it escapes \r, \n, \x00, \x1a, baskslash, single quotes, and double quotes
+            return Regex.Replace(usString, @"[\r\n\x00\x1a\\'""]", @"\$0");
+        }
+
+        private string GetRandomFoodItem()
+        {
+            Random rnd = new Random();
+
+            string[] foodArray =
+            {
+                "scone","donut","struddel","cheese danish","cherry danish","slice of hamloaf","slice of vegan hamloaf","peice of cherry pie",
+                "peice of apple pie","bowl of icecream","couscous","dumpling","french fry","pea","spaghetti squash","marshmallow","baguette",
+                "truffle","soybean","chestnut","olive","almond","shallot","Mandarin orange","gelatin","white chocolate","lentil","cookie",
+                "cauliflower","eggplant","blueberry","turkey","pine nut","green bean","fig","octopus","pumpkin","cucumber","apricot","coconut",
+                "plantain","strawberry","tortilla","nectarine","watermelon","cashew nut","cranberry","custard","tomatoe","chickpea","wild rice",
+                "arugula","steak","grapefruit","jelly bean","lobster","potatoe","melon","kumquat","chive","sweet pepper","kiwi","huckleberry",
+                "aioli","okra","granola","crouton","brazil nut","ice cream","marmalade sandwich","avocado","raisin","banana","snow pea",
+                "chipotle pepper","bruschetta","parsnip","succotash","summer squash","pickle","apple","asparagus","pineapple","guava",
+                "chaurice sausage","ancho chile pepper","lemon","hazelnut","pear","hash brown","English muffin","plum","papaya","anchovy",
+                "grape","honeydew melon","raspberry","broccoli","coffee","peach","sweet potatoe","bowl of macaroni","Goji berry","hamburger",
+                "swiss cheese wedge","sausage","sushi roll","pecan","peanut butter sammich","fried egg","habanero","red cabbage","passion fruit",
+                "gorgonzola crumble","lettuce","onion","mozzarella stick","breadfruit","turnip","broccoli raab","black olive","sunflower seed",
+                "chocolate","cabbage","focaccia","cider","ham","celery","squash","cottage cheese","bagle"
+
+            };
+
+            int r = rnd.Next(foodArray.Length);
+            return foodArray[r];
+        }
+
+
     }
 }
