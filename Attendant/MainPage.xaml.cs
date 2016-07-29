@@ -56,7 +56,6 @@ namespace Attendant
         private Int32 iStudentNumber = 0;
         private Int32 iStudentID = 0;
         private bool bStudentCheckedIn = false;
-        private Int32 iStudentTimeRemaining = 0;
         private TextBlock currentTextBlockMessage;
         private int KeyModeCounter = 0;
         private int ConfigKeyCounter = 0;
@@ -81,13 +80,28 @@ namespace Attendant
             System.Text.Encoding.RegisterProvider(ppp);
 
             // Attempt to open the long term connection.
+            OpenDatabase();
+
+            // Attempt to fill in the common destinations array.
+            PopulateCommonDestinations();
+
+            // Get the daily news blurb.
+            string url = "http://" + localSettings.Values["DBServer"] + "/motd.php";
+            Uri navUri = new Uri(url);
+            //webviewDailyNews.NavigateToString(url);
+            webviewDailyNews.Navigate(navUri);            
+        }
+
+        private void OpenDatabase()
+        {
+            // Attempt to open the long term connection.
             try
             {
                 string csMySQL = "Server=" + localSettings.Values["DBServer"] +
-                    ";Database=" + localSettings.Values["DBDatabase"] + 
+                    ";Database=" + localSettings.Values["DBDatabase"] +
                     ";Uid=" + localSettings.Values["DBUser"] +
                     ";Pwd=" + localSettings.Values["DBPassword"] + ";SslMode=None;";
-                                
+
                 dbConn = new MySqlConnection(csMySQL);
                 dbConn.Open();
                 string debugOutput = String.Format("MySQL datbase connection open.  Mysql version : {0}", dbConn.ServerVersion);
@@ -100,15 +114,6 @@ namespace Attendant
                 btnRestart.Visibility = Visibility.Visible;
                 currentTextBlockMessage.Text = "An error occured when connecting to the MySQL Database server.  Please validate the hostname, database name, username and password, then restart the system." + "\nException: " + ex.Message + "\n";
             }
-
-            // Attempt to fill in the common destinations array.
-            PopulateCommonDestinations();
-
-            // Get the daily news blurb.
-            string url = "http://" + localSettings.Values["DBServer"] + "/motd.php";
-            Uri navUri = new Uri(url);
-            //webviewDailyNews.NavigateToString(url);
-            webviewDailyNews.Navigate(navUri);            
         }
 
         void PopulateCommonDestinations()
@@ -243,6 +248,10 @@ namespace Attendant
 
         private bool ProcessStudentNumber()
         {
+            // Validate the database connection is still open.  This can close for a number of reasons, so validate that it's still alive.
+            if (!dbConn.Ping())
+                OpenDatabase();
+
             // Clear any old messages.
             textBlockMessage.Text = "";
 
@@ -273,7 +282,6 @@ namespace Attendant
                     studentReader.Read();
                     iStudentID = studentReader.GetInt32("ID");
                     bStudentCheckedIn = studentReader.GetBoolean("CurrentlyCheckedIn");
-                    iStudentTimeRemaining = studentReader.GetInt32("DailyTimeRemaining");
                 }
 
                 // Close the reader.  We have what we need.
@@ -334,7 +342,6 @@ namespace Attendant
                     tbStudentID.Text = "";
                     iStudentNumber = 0;
                     iStudentID = 0;
-                    iStudentTimeRemaining = 0;
                     bStudentCheckedIn = false;
                     textBlockSignInMessage.Text = "";
 
@@ -379,6 +386,8 @@ namespace Attendant
 
                     piSignOutCustom.Focus(FocusState.Programmatic);
                     currentTextBlockMessage = textBlockCheckOutCustomMessage;
+
+                    tbCustomDest.Text = "";
                     break;
                 case SignOutCustomWithInitialsPivot: // Sign out with custom destination and initials.
                     this.pivMainPivot.SelectedIndex = 4;
@@ -390,6 +399,9 @@ namespace Attendant
 
                     piSignOutCustomWithInitials.Focus(FocusState.Programmatic);
                     currentTextBlockMessage = textBlockCheckOutCustomWithInitialsMessage;
+
+                    tbCustomDestWithStaffInitials.Text = "";
+                    tbStaffInitials.Text = "";
                     break;
             }
 
