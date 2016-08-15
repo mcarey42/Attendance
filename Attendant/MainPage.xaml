@@ -14,7 +14,7 @@
             <PivotItem Name="MainSignInOut" Header="Student ID Number" Margin="12,0,12,12">
                 <Grid HorizontalAlignment="Left" Height="910" Margin="10,10,0,0" VerticalAlignment="Top" Width="1237">
                     <TextBlock x:Name="textBlockMessage" HorizontalAlignment="Left" Margin="110,800,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Height="100" Width="965" FontSize="24" CompositeMode="SourceOver"/>
-                    <Button x:Name="btnRestart" Content="Restart" Visibility="Collapsed" Background="Red" Foreground="White" HorizontalAlignment="Left" Margin="850,725,0,0" VerticalAlignment="Top" Height="51" Width="178" FontSize="32" Click="btnRestart_Click"/>
+                    <Button x:Name="btnRestart" Content="Restart" Visibility="Collapsed" Background="Red" Foreground="White" HorizontalAlignment="Left" Margin="520,725,0,0" VerticalAlignment="Top" Height="51" Width="178" FontSize="32" Click="btnRestart_Click"/>
                     <Image x:Name="image" HorizontalAlignment="Left" Height="307" Margin="110,21,0,0" VerticalAlignment="Top" Width="965" Source="Assets/linworthglass.jpg"/>
                     <TextBlock x:Name="textBlock" HorizontalAlignment="Left" Margin="110,345,0,0" TextWrapping="Wrap" Text="Please enter your Student ID Number and press Enter." VerticalAlignment="Top" Height="175" Width="965" FontSize="64" CompositeMode="SourceOver"/>
                     <TextBox x:Name="tbStudentID" HorizontalAlignment="Left" Margin="125,525,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Height="145" Width="950" FontSize="72" KeyDown="tbStudentID_KeyDown" KeyUp="tbStudentID_KeyUp" />

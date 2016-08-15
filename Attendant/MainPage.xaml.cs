@@ -85,11 +85,17 @@ namespace Attendant
             // Attempt to fill in the common destinations array.
             PopulateCommonDestinations();
 
-            // Get the daily news blurb.
-            string url = "http://" + localSettings.Values["DBServer"] + "/motd.php";
-            Uri navUri = new Uri(url);
-            //webviewDailyNews.NavigateToString(url);
-            webviewDailyNews.Navigate(navUri);            
+            try
+            {
+                // Get the daily news blurb.
+                string url = "http://" + localSettings.Values["DBServer"] + "/motd.php";
+                Uri navUri = new Uri(url);
+                webviewDailyNews.Navigate(navUri);
+            }
+            catch (Exception ex)
+            {
+                currentTextBlockMessage.Text = "An error occured when connecting to the Message of the Day page.  Please configure the system!" + "\nException: " + ex.Message + "\n";
+            }
         }
 
         private void OpenDatabase()
